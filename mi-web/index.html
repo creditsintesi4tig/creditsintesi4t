@@ -1296,12 +1296,17 @@
 
             if (!await checkAndBlock(rawInput, spinner)) { btn.disabled = false; return; }
 
+            // Detectar si l'entrada conté una URL per activar la cerca web
+            const hasUrl = /https?:\/\/[^\s]+/.test(rawInput);
+
             const apiUrl = proxyUrl;
-            const systemPrompt = "Ets una eina educativa per a alumnes de 4t d'ESO (14-16 anys). Si el text de l'usuari conté contingut inapropiat per a un context escolar, respon únicament: 'Aquest contingut no és adequat per a l'entorn escolar.' i no facis res més. En cas contrari, ets un acadèmic bibliotecari. Converteix la font aportada en: 1) Citació APA abreujada de text, 2) Format de peu de pàgina, i 3) Entrada completa de Bibliografia. Afegeix un breu consell crític per citar-ho. Respon només en català usant un format JSON estructurat.";
+            const systemPrompt = hasUrl
+                ? "Ets una eina educativa per a alumnes de 4t d'ESO (14-16 anys). Si el text de l'usuari conté contingut inapropiat per a un context escolar, respon únicament: 'Aquest contingut no és adequat per a l'entorn escolar.' i no facis res més. En cas contrari, ets un acadèmic bibliotecari. L'usuari t'ha donat una URL. Visita la pàgina web d'aquesta URL i extreu les dades bibliogràfiques reals (autor, títol, any, editorial o web). Amb les dades reals generades, crea: 1) Citació APA abreujada de text, 2) Format de peu de pàgina, i 3) Entrada completa de Bibliografia. Afegeix un breu consell crític. NO inventes dades. Respon únicament en català amb un JSON estructurat sense cap text addicional."
+                : "Ets una eina educativa per a alumnes de 4t d'ESO (14-16 anys). Si el text de l'usuari conté contingut inapropiat per a un context escolar, respon únicament: 'Aquest contingut no és adequat per a l'entorn escolar.' i no facis res més. En cas contrari, ets un acadèmic bibliotecari. Converteix la font aportada en: 1) Citació APA abreujada de text, 2) Format de peu de pàgina, i 3) Entrada completa de Bibliografia. Afegeix un breu consell crític per citar-ho. Respon només en català usant un format JSON estructurat.";
 
             const payload = {
-                contents: [{ parts: [{ text: `Dades rebudes de la font: ${rawInput}` }] }],
-                generationConfig: {
+                contents: [{ parts: [{ text: hasUrl ? `Visita aquesta URL i genera la citació bibliogràfica real: ${rawInput}` : `Dades rebudes de la font: ${rawInput}` }] }],
+                generationConfig: hasUrl ? undefined : {
                     responseMimeType: "application/json",
                     responseSchema: {
                         type: "OBJECT",
@@ -1318,19 +1323,24 @@
                     parts: [{ text: systemPrompt }]
                 }
             };
+            // Netejar undefined del payload
+            if (!payload.generationConfig) delete payload.generationConfig;
 
             try {
                 const response = await fetchWithBackoff(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: fallbackModel, body: payload })
+                    body: JSON.stringify({ model: fallbackModel, body: payload, useWebSearch: hasUrl })
                 });
 
                 if (!response.ok) throw new Error();
 
                 const result = await response.json();
-                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                const formattedCitation = JSON.parse(jsonText);
+                // Quan s'usa cerca web, el model retorna text lliure. Extreure el JSON.
+                const jsonText = result?.candidates?.[0]?.content?.parts
+                    ?.find(p => p.text)?.text || result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                const cleanJson = jsonText.replace(/```json|```/g, '').trim();
+                const formattedCitation = JSON.parse(cleanJson);
 
                 document.getElementById('cite-out-apa').innerText = formattedCitation.apa;
                 document.getElementById('cite-out-foot').innerText = formattedCitation.footnote;

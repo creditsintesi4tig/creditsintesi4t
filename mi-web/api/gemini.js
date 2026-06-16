@@ -14,16 +14,13 @@ async function callGeminiWithRetry(googleUrl, body, maxRetries = 4) {
     });
 
     if (response.status !== 429) {
-      // Éxito o error distinto de rate limit → devolver tal cual
       return response;
     }
 
     if (attempt === maxRetries) {
-      // Último intento fallido → devolver el 429 al cliente
       return response;
     }
 
-    // Espera exponencial: 2s, 4s, 8s…
     await sleep(delay);
     delay *= 2;
   }
@@ -39,26 +36,27 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const { model, body } = req.body;
+  const { model, body, useWebSearch } = req.body;
   if (!model || !body) {
     return res.status(400).json({ error: 'Missing model or body' });
   }
 
   const googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  // Encolar la petición: cada llamada espera a que termine la anterior
-  // Esto evita ráfagas simultáneas que disparan el rate limit
+  // Si useWebSearch és true, afegim l'eina de cerca web de Google
+  const finalBody = useWebSearch
+    ? { ...body, tools: [{ google_search: {} }] }
+    : body;
+
   const result = await new Promise((resolve, reject) => {
     queuePromise = queuePromise
-      .then(() => callGeminiWithRetry(googleUrl, body))
+      .then(() => callGeminiWithRetry(googleUrl, finalBody))
       .then(resolve)
       .catch(reject);
   });
 
   const data = await result.json();
 
-  // Si después de todos los reintentos sigue siendo 429,
-  // devolver mensaje amigable en catalán
   if (result.status === 429) {
     return res.status(429).json({
       error: 'rate_limit',

@@ -169,7 +169,7 @@
                     Converteix-te en <span class="text-[#00a0e4]">investigador/a</span>
                 </h2>
                 <p class="text-base md:text-lg text-slate-600 leading-relaxed mb-8">
-                    El Crèdit de Síntesi no és una recopilació d'informació sobre un tema. És el teu primer treball d'investigació real: formules una <strong>hipòtesi pròpia</strong>, busques evidències per contrastar-la i construeixes un <strong>argument</strong> al llarg de tota la setmana. Al final, el tribunal et preguntarà — i hauràs de defensar-ho.
+                    El Crèdit de Síntesi no és una recopilació d'informació sobre un tema. És el teu primer treball d'investigació real: formules una <strong>hipòtesi pròpia</strong>, busques evidències per contrastar-la i construeixes un <strong>argument</strong> al llarg de tota la setmana. Al final, el tribunal valorarà si has argumentat la teva hipòtesi o només has exposat informació.
                 </p>
                 <!-- Shortcut grid -->
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-2xl mx-auto">
@@ -408,11 +408,11 @@
                                     <div class="flex items-start gap-3">
                                         <span class="bg-[#00a0e4] text-white text-xs font-extrabold px-2.5 py-1 rounded-full shrink-0">4</span>
                                         <div>
-                                            <h5 class="font-bold text-[#48626f] text-sm">Desenvolupament / Marc Teòric <span class="font-normal text-slate-400 text-xs">(el nucli)</span></h5>
+                                            <h5 class="font-bold text-[#48626f] text-sm">Desenvolupament <span class="font-normal text-slate-400 text-xs">(el nucli)</span></h5>
                                             <p class="text-xs text-amber-700 font-semibold mt-1 mb-1.5">🎯 Funció: construeixes l'argument. Cada apartat ha d'aportar una raó, una dada o una evidència que recolzi o qüestioni la teva hipòtesi — no simplement informar sobre el tema.</p>
                                             <ul class="text-xs text-slate-600 mt-1 space-y-1 list-disc pl-4">
                                                 <li><strong>Part teòrica:</strong> Què diuen els experts i les fonts acadèmiques? Cita-les i explica per què són rellevants per a la <em>teva</em> hipòtesi.</li>
-                                                <li><strong>Part pràctica (el contrast):</strong> Dades d'enquestes, experiments o entrevistes. Analitza els resultats: confirmen o contradiuen el que havies predit?</li>
+                                                <li><strong>Part pràctica (el contrast, si n'hi ha):</strong> Dades d'enquestes, experiments o entrevistes. Analitza els resultats: confirmen o contradiuen el que havies predit?</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -1083,24 +1083,43 @@
         const proxyUrl = "/api/gemini";
 
         // Checklist items array
-        const checklistItems = [
-            // ARGUMENTACIÓ
-            "La introducció explica PER QUÈ el tema és rellevant i quin és el teu argument principal — no simplement de què tractarà el treball.",
-            "Pregunta i hipòtesi d'investigació definides amb claredat a la introducció.",
-            "Cada apartat del Desenvolupament connecta la informació amb la hipòtesi — no només informa sobre el tema.",
-            "Les conclusions responen DIRECTAMENT a la hipòtesi amb les evidències recollides — no és un resum del que has explicat.",
-            // FONTS I CITACIÓ
-            "Inclusió de com a mínim 3 o 4 articles, publicacions o llibres localitzats a Google Scholar.",
-            "Totes les idees de tercers estan citades correctament (APA o notes al peu).",
-            "La bibliografia final està ordenada alfabèticament per l'autor.",
-            // FORMAT
-            "Format del text: lletra mida 12, títols a 14, interlineat a 1.5 i text justificat.",
-            "L'extensió total del treball escrit se situa entre 10 i 20 pàgines.",
-            "Revisió ortogràfica feta.",
-            "La portada presenta un disseny creatiu amb el teu nom complet, curs, títol i marca d'Igualada.",
-            // TRANSPARÈNCIA IA
-            "S'ha omplert i inclòs l'annex d'ús responsable d'IA amb total transparència sobre les eines utilitzades."
+        const checklistGroups = [
+            {
+                title: "🧩 Argumentació",
+                items: [
+                    "La introducció explica PER QUÈ el tema és rellevant i quin és el teu argument principal — no simplement de què tractarà el treball.",
+                    "Pregunta i hipòtesi d'investigació definides amb claredat a la introducció.",
+                    "Cada apartat del Desenvolupament connecta la informació amb la hipòtesi — no només informa sobre el tema.",
+                    "Les conclusions responen DIRECTAMENT a la hipòtesi amb les evidències recollides — no és un resum del que has explicat."
+                ]
+            },
+            {
+                title: "📚 Fonts i citació",
+                items: [
+                    "Inclusió de com a mínim 3 o 4 articles, publicacions o llibres localitzats a Google Scholar.",
+                    "Totes les idees de tercers estan citades correctament (APA o notes al peu).",
+                    "La bibliografia final està ordenada alfabèticament per l'autor."
+                ]
+            },
+            {
+                title: "📐 Format",
+                items: [
+                    "Format del text: lletra mida 12, títols a 14, interlineat a 1.5 i text justificat.",
+                    "L'extensió total del treball escrit se situa entre 10 i 20 pàgines.",
+                    "Revisió ortogràfica feta.",
+                    "La portada presenta un disseny creatiu amb el teu nom complet, curs, títol i marca d'Igualada."
+                ]
+            },
+            {
+                title: "🤖 Transparència IA",
+                items: [
+                    "S'ha omplert i inclòs l'annex d'ús responsable d'IA amb total transparència sobre les eines utilitzades."
+                ]
+            }
         ];
+
+        // Flattened list (kept for compatibility with progress logic)
+        const checklistItems = checklistGroups.flatMap(g => g.items);
 
         // Sincronització de progrés
         async function saveUserProgress(checkedIndices) {
@@ -2090,21 +2109,31 @@
         // Checklist Management
         function initChecklist() {
             const container = document.getElementById('checklist-container');
-            checklistItems.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = "flex items-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition cursor-pointer";
-                div.innerHTML = `
-                    <input type="checkbox" id="check-${index}" onchange="updateProgress()" class="w-5 h-5 rounded border-sky-300 text-[#00a0e4] focus:ring-[#00a0e4] shrink-0">
-                    <label for="check-${index}" class="ml-4 text-xs font-medium cursor-pointer flex-grow text-slate-300 select-none">${item}</label>
-                `;
-                div.onclick = (e) => {
-                    if (e.target.tagName !== 'INPUT') {
-                        const cb = div.querySelector('input');
-                        cb.checked = !cb.checked;
-                        updateProgress();
-                    }
-                };
-                container.appendChild(div);
+            let globalIndex = 0;
+            checklistGroups.forEach((group, gIdx) => {
+                const header = document.createElement('div');
+                header.className = `text-xs font-extrabold text-sky-300 uppercase tracking-wider ${gIdx === 0 ? 'mt-0' : 'mt-6'} mb-2 pl-1`;
+                header.textContent = group.title;
+                container.appendChild(header);
+
+                group.items.forEach((item) => {
+                    const index = globalIndex;
+                    const div = document.createElement('div');
+                    div.className = "flex items-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition cursor-pointer";
+                    div.innerHTML = `
+                        <input type="checkbox" id="check-${index}" onchange="updateProgress()" class="w-5 h-5 rounded border-sky-300 text-[#00a0e4] focus:ring-[#00a0e4] shrink-0">
+                        <label for="check-${index}" class="ml-4 text-xs font-medium cursor-pointer flex-grow text-slate-300 select-none">${item}</label>
+                    `;
+                    div.onclick = (e) => {
+                        if (e.target.tagName !== 'INPUT') {
+                            const cb = div.querySelector('input');
+                            cb.checked = !cb.checked;
+                            updateProgress();
+                        }
+                    };
+                    container.appendChild(div);
+                    globalIndex++;
+                });
             });
         }
 
